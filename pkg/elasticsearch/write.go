@@ -3,12 +3,15 @@ package elasticsearch
 import (
 	"bytes"
 	"fmt"
+	"time"
 
 	"github.com/ebuildy/elastic-copy/pkg/engine"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 )
+
+const writeTimes = 5 * time.Minute
 
 func (c *Client) Write(process engine.ProcessQuery, data []engine.Datum) engine.WriteResult {
 
@@ -79,11 +82,11 @@ func (c *Client) Write(process engine.ProcessQuery, data []engine.Datum) engine.
 				err = nil
 
 				if len(indexType) == 0 || process.TypeOverride == "_" {
-					res, err = es.Bulk(bulkReader, es.Bulk.WithIndex(index))
+					res, err = es.Bulk(bulkReader, es.Bulk.WithIndex(index), es.Bulk.WithTimeout(writeTimes))
 				} else if len(process.TypeOverride) > 0 {
-					res, err = es.Bulk(bulkReader, es.Bulk.WithIndex(index), es.Bulk.WithDocumentType(process.TypeOverride))
+					res, err = es.Bulk(bulkReader, es.Bulk.WithIndex(index), es.Bulk.WithDocumentType(process.TypeOverride), es.Bulk.WithTimeout(writeTimes))
 				} else {
-					res, err = es.Bulk(bulkReader, es.Bulk.WithIndex(index), es.Bulk.WithDocumentType(indexType))
+					res, err = es.Bulk(bulkReader, es.Bulk.WithIndex(index), es.Bulk.WithDocumentType(indexType), es.Bulk.WithTimeout(writeTimes))
 				}
 
 				if err == nil {
@@ -98,7 +101,7 @@ func (c *Client) Write(process engine.ProcessQuery, data []engine.Datum) engine.
 			if err != nil {
 				log.WithField("index", index).
 					WithField("batch_id", currBatch).
-					Warnf("bulk error: %s", err)
+					Warnf("bulk error: %s,%i", err, data)
 
 				if process.FailFast {
 					log.Fatal("error detected, fail fast!")

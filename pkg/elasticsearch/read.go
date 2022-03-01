@@ -11,6 +11,8 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+const scrollTime = 30 * time.Minute
+
 func (c *Client) Read(process engine.ProcessQuery, writer engine.Target, progressReporter *pb.ProgressBar) engine.ProcessShardResult {
 	var (
 		batchNum      int
@@ -36,13 +38,13 @@ func (c *Client) Read(process engine.ProcessQuery, writer engine.Target, progres
 				es.Search.WithSize(process.BatchSize),
 				//es.Search.WithQuery(query.Query),
 				es.Search.WithBody(strings.NewReader(query.Query)),
-				es.Search.WithScroll(time.Minute),
+				es.Search.WithScroll(scrollTime),
 				es.Search.WithPreference("_shards:"+query.Shard),
 			)
 		} else {
 			res, err = es.Scroll(
 				es.Scroll.WithScrollID(scrollID),
-				es.Scroll.WithScroll(time.Minute),
+				es.Scroll.WithScroll(scrollTime),
 			)
 		}
 
